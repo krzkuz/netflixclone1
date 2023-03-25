@@ -6,9 +6,9 @@ from django.utils.text import slugify
 
 from netflixclone.db.models import PublishStateOptions
 from netflixclone.db.receivers import publish_state_pre_save, slugify_pre_save
+from videos.models import Video
 
-
-class VideoQuerySet(models.QuerySet):
+class PlaylistQuerySet(models.QuerySet):
     def published(self):
         return self.filter(
             state=PublishStateOptions.PUBLISH,
@@ -16,19 +16,30 @@ class VideoQuerySet(models.QuerySet):
         )
     
 
-class VideoManager(models.Manager):
+class PlaylistManager(models.Manager):
     def get_queryset(self):
-        return VideoQuerySet(self.model, using=self._db)
+        return PlaylistQuerySet(self.model, using=self._db)
     
     def published(self):
         return self.get_queryset().published()
     
 
-class Video(models.Model):
+class Playlist(models.Model):
     title = models.CharField(max_length=250)
     description = models.TextField(blank=True, null=True)
     slug = models.SlugField(blank=True, null=True)
-    video_id = models.CharField(max_length=250, unique=True)
+    video = models.ForeignKey(
+        Video, 
+        null=True, 
+        blank=True, 
+        on_delete=models.SET_NULL,
+        related_name='playlist_featured',
+        )
+    videos = models.ManyToManyField(
+        Video, 
+        blank=True, 
+        related_name='playlist_item',
+        )
     active = models.BooleanField(default=True)
     timestamp = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
@@ -41,31 +52,15 @@ class Video(models.Model):
         auto_now_add=False, 
         auto_now=False,
         blank=True, 
-        null=True
+        null=True,
         )
     
-    objects = VideoManager()
+    objects = PlaylistManager()
 
     @property
     def is_published(self):
         return self.active
 
-    def get_playlist_ids(self):
-        return list(self.playlist_set.all().values_list('id', flat=True))
 
-class VideoAllProxy(Video):
-    class Meta:
-        proxy =  True
-        verbose_name = 'Video'
-        verbose_name_plural = 'All Videos'
-
-
-class VideoPublishedProxy(Video):
-    class Meta:
-        proxy =  True
-        verbose_name = 'Published Video'
-        verbose_name_plural = 'Published Videos'
-
-
-pre_save.connect(publish_state_pre_save, sender=Video)
-pre_save.connect(slugify_pre_save, sender=Video)
+pre_save.connect(publish_state_pre_save, sender=Playlist)
+pre_save.connect(slugify_pre_save, sender=Playlist)
