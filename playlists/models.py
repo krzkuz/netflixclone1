@@ -1,8 +1,6 @@
 from django.db import models
 from django.db.models.signals import pre_save
-from django.dispatch import receiver
 from django.utils import timezone
-from django.utils.text import slugify
 
 from netflixclone.db.models import PublishStateOptions
 from netflixclone.db.receivers import publish_state_pre_save, slugify_pre_save
@@ -25,6 +23,8 @@ class PlaylistManager(models.Manager):
     
 
 class Playlist(models.Model):
+    parent = models.ForeignKey('self', null=True, on_delete=models.SET_NULL)
+    order = models.IntegerField(default=1)
     title = models.CharField(max_length=250)
     description = models.TextField(blank=True, null=True)
     slug = models.SlugField(blank=True, null=True)
@@ -39,6 +39,7 @@ class Playlist(models.Model):
         Video, 
         blank=True, 
         related_name='playlist_item',
+        through='PlayListItem'
         )
     active = models.BooleanField(default=True)
     timestamp = models.DateTimeField(auto_now_add=True)
@@ -61,6 +62,41 @@ class Playlist(models.Model):
     def is_published(self):
         return self.active
 
-
+        
 pre_save.connect(publish_state_pre_save, sender=Playlist)
 pre_save.connect(slugify_pre_save, sender=Playlist)
+
+
+class TVShowProxyManager(PlaylistManager):
+    def all(self):
+        return self.get_queryset().filter(parent__isnull=True)
+
+
+class TVShowProxy(Playlist):
+    objects = TVShowProxyManager()
+    class Meta:
+        proxy = True
+        verbose_name = 'TV Show'
+        verbose_name_plural = 'TV Shows'
+    
+
+class TVShowSeasonProxyManager(PlaylistManager):
+    def all(self):
+        return self.get_queryset().filter(parent__isnull=False)
+    
+
+class TVShowSeasonProxy(Playlist):
+    class Meta:
+        proxy = True
+        verbose_name = 'Season'
+        verbose_name_plural = 'Seasons'
+
+
+class PlayListItem(models.Model):
+    playlist = models.ForeignKey(Playlist, on_delete=models.CASCADE)
+    video = models.ForeignKey(Video, on_delete=models.CASCADE)
+    order = models.IntegerField(default=1)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['order', '-timestamp']

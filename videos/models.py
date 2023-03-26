@@ -1,8 +1,6 @@
 from django.db import models
 from django.db.models.signals import pre_save
-from django.dispatch import receiver
 from django.utils import timezone
-from django.utils.text import slugify
 
 from netflixclone.db.models import PublishStateOptions
 from netflixclone.db.receivers import publish_state_pre_save, slugify_pre_save
@@ -51,7 +49,8 @@ class Video(models.Model):
         return self.active
 
     def get_playlist_ids(self):
-        return list(self.playlist_set.all().values_list('id', flat=True))
+        return list(self.playlist_featured.all().values_list('id', flat=True))
+
 
 class VideoAllProxy(Video):
     class Meta:
