@@ -4,15 +4,18 @@ from .models import VideoPublishedProxy, VideoAllProxy
 
 
 class VideoAllProxyAdmin(admin.ModelAdmin):
-    list_display = ['title', 'id', 'video_id', 'is_published', 'get_playlist_ids']
+    list_display = [
+        'title', 
+        'id', 
+        'video_id', 
+        'is_published', 
+        'get_playlist_ids'
+        ]
     search_fields = ['title']
     list_filter = ['state', 'active']
     readonly_fields = ['id', 'is_published', 'get_playlist_ids']
     class Meta:
         model = VideoAllProxy
-
-    # def published(self, obj, *args, **kwargs):
-    #     return obj.active
     
 admin.site.register(VideoAllProxy, VideoAllProxyAdmin)
 
